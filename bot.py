@@ -20,6 +20,10 @@ RSS_FEEDS = [
         "name": "Sky Sports",
         "url": "https://www.skysports.com/rss/12040"
     }
+    {
+        "name": "The Athletic",
+        "url": "https://news.google.com/rss/search?q=Manchester+City+site:theathletic.com&hl=en-GB&gl=GB&ceid=GB:en"
+    }
 ]
 
 SEEN_FILE = "seen_news.txt"
