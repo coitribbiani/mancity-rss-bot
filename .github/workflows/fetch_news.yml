@@ -8,7 +8,6 @@ on:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-
     steps:
       - name: Depoyu Klonla
         uses: actions/checkout@v4
@@ -16,7 +15,7 @@ jobs:
       - name: Python Kurulumu
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
       - name: Bağımlılıkları Yükle
         run: |
@@ -25,7 +24,8 @@ jobs:
 
       - name: Botu Çalıştır
         env:
-          PYTHONUNBUFFERED: "1"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python bot.py
 
@@ -34,4 +34,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add seen_news.txt
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update seen news [skip ci]" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update seen news [skip ci]" && git push)
