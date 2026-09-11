@@ -47,7 +47,7 @@ MAX_PER_RUN = 15
 BLACKLIST_KEYWORDS = [
     "ratings", "fpl", "fantasy", "quiz", "opinion", "predicted xi",
     "lineup predicted", "how to watch", "stream", "tv channel",
-    "ticket", "former star", "ex-player", "agent says"
+    "ticket", "former star", "ex-player", "agent says", "women", "women's", "wsl", "she/her"
 ]
 
 REQUIRED_KEYWORDS = ["man city", "manchester city", "maresca", "etihad"]
