@@ -1,6 +1,7 @@
 import os
 import requests
 import feedparser
+import time
 from deep_translator import GoogleTranslator
 
 RSS_FEEDS = [
@@ -31,10 +32,18 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def translate_to_turkish(text):
-    """Metni İngilizceden Türkçeye çevirir. Hata alırsa orijinalini döner."""
+    """Metni Türkçeye çevirir; hata veya limit durumunda orijinal metni döner."""
+    if not text:
+        return ""
     try:
+        time.sleep(0.8)  # Google hız sınırına (rate limit) takılmamak için kısa bekleme
         translated = GoogleTranslator(source='auto', target='tr').translate(text)
-        return translated if translated else text
+        
+        # Google'ın hata sayfası metni dönmesini engelle
+        if not translated or "Error 500" in translated or "That’s an error" in translated:
+            return text
+            
+        return translated
     except Exception as e:
         print(f"Çeviri hatası: {e}")
         return text
