@@ -1,8 +1,8 @@
 import os
 import requests
 import feedparser
+from deep_translator import GoogleTranslator
 
-# Taranacak RSS Kaynakları Listesi
 RSS_FEEDS = [
     {
         "name": "Google News",
@@ -19,22 +19,38 @@ RSS_FEEDS = [
     {
         "name": "Sky Sports",
         "url": "https://www.skysports.com/rss/12040"
+    },
+    {
+        "name": "The Athletic",
+        "url": "https://news.google.com/rss/search?q=Manchester+City+site:theathletic.com&hl=en-GB&gl=GB&ceid=GB:en"
     }
-        ]
+]
 
 SEEN_FILE = "seen_news.txt"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+def translate_to_turkish(text):
+    """Metni İngilizceden Türkçeye çevirir. Hata alırsa orijinalini döner."""
+    try:
+        translated = GoogleTranslator(source='auto', target='tr').translate(text)
+        return translated if translated else text
+    except Exception as e:
+        print(f"Çeviri hatası: {e}")
+        return text
+
 def send_telegram_message(title, link, source_name):
-    """Telegram kanalına kaynak bilgisiyle formatlı mesaj gönderir."""
+    """Telegram kanalına Türkçe çevirili mesaj gönderir."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("Uyarı: TELEGRAM_BOT_TOKEN veya TELEGRAM_CHAT_ID tanımlanmamış!")
         return False
 
+    title_tr = translate_to_turkish(title)
+
     text = (
         f"⚽ <b>Manchester City Yeni Haber</b>\n\n"
-        f"📰 {title}\n\n"
+        f"🇹🇷 {title_tr}\n"
+        f"🇬🇧 <i>{title}</i>\n\n"
         f"📌 <b>Kaynak:</b> {source_name}\n"
         f"🔗 <a href='{link}'>Haberi Oku</a>\n\n"
         f"#ManCity #MCFC"
@@ -51,7 +67,7 @@ def send_telegram_message(title, link, source_name):
     try:
         response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
-        print(f"[{source_name}] Bildirim gönderildi: {title}")
+        print(f"[{source_name}] Bildirim gönderildi: {title_tr}")
         return True
     except requests.exceptions.RequestException as e:
         print(f"Telegram gönderim hatası: {e}")
@@ -91,7 +107,6 @@ def fetch_and_notify():
         if not feed.entries:
             continue
 
-        # En yeni haberleri sırayla al (tersten gezerek kronolojik iletir)
         for entry in reversed(feed.entries):
             link = getattr(entry, "link", "").strip()
             title = getattr(entry, "title", "").strip()
@@ -105,7 +120,6 @@ def fetch_and_notify():
                     seen_links.add(link)
                     total_new_count += 1
                 else:
-                    # Token yoksa yerel testte yine de hafızaya al
                     seen_links.add(link)
                     total_new_count += 1
 
