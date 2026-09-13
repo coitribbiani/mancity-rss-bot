@@ -44,13 +44,42 @@ SEEN_RETENTION_DAYS = 30
 TELEGRAM_SEND_DELAY = 0.4
 MAX_PER_RUN = 15
 
+# Başlıkta geçerse haberi doğrudan çöpe atar (tüm kaynaklar için geçerli)
 BLACKLIST_KEYWORDS = [
     "ratings", "fpl", "fantasy", "quiz", "opinion", "predicted xi",
     "lineup predicted", "how to watch", "stream", "tv channel",
-    "ticket", "former star", "ex-player", "agent says", "women", "women's", "wsl", "she/her"
+    "ticket", "former star", "ex-player", "agent says",
+    "women", "women's", "wsl", "she/her",
+    # Bahis / oran içerikleri
+    "odds", "betting", "bet builder", "acca", "accumulator",
+    "free bet", "best bets", "tips", "correct score", "each way",
 ]
 
+# Man City ile doğrudan ilgili olduğunu doğrulamak için kullanılan kelimeler
 REQUIRED_KEYWORDS = ["man city", "manchester city", "maresca", "etihad"]
+
+# Başka bir spora ait olduğu belli terimler. Başlıkta bunlardan biri geçip
+# REQUIRED_KEYWORDS'ten hiçbiri geçmiyorsa haber, kaynağı ne olursa olsun elenir.
+# (F1, tenis, diğer ligler vb. "Manchester City" araması bazen bunları da
+# yanlışlıkla döndürebiliyor.)
+OTHER_SPORT_KEYWORDS = [
+    "f1", "formula 1", "grand prix", "motogp", "moto gp",
+    "tennis", "wimbledon", "atp", "wta", "us open", "roland garros",
+    "nba", "nfl", "mlb", "nhl",
+    "cricket", "ipl", "ashes",
+    "rugby", "six nations",
+    "boxing", "ufc", "mma",
+    "darts", "snooker", "cycling", "tour de france",
+    "golf", "ryder cup", "olympics",
+]
+
+# Yalnızca genel/geniş arama yapan kaynaklarda (Google News tabanlı sorgular)
+# REQUIRED_KEYWORDS kontrolü zorunlu tutulur. Kaynak adına değil, URL'in
+# Google News araması olup olmadığına bakılır — böylece "The Athletic" gibi
+# aslında Google News üzerinden sorgulanan kaynaklar da bu kontrolden kaçmaz.
+def is_broad_search_source(url):
+    return "news.google.com" in url
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -127,14 +156,25 @@ def save_timestamped_set(filepath, data_dict):
             f.write(f"{key}\t{ts.isoformat()}\n")
 
 
-def is_relevant_news(title, source_name):
+def is_relevant_news(title, source_name, source_url):
     norm_title = title.lower()
 
+    # 1) Blacklist: her kaynak için geçerli
     if any(bad_word in norm_title for bad_word in BLACKLIST_KEYWORDS):
         return False
 
-    if source_name in ["Google News", "Manchester Evening News"]:
-        if not any(req_word in norm_title for req_word in REQUIRED_KEYWORDS):
+    has_required = any(req_word in norm_title for req_word in REQUIRED_KEYWORDS)
+
+    # 2) Başka spora ait olduğu belli olan ama City ile ilgisi görünmeyen
+    # başlıklar: kaynak ne olursa olsun elenir.
+    if any(sport_word in norm_title for sport_word in OTHER_SPORT_KEYWORDS):
+        if not has_required:
+            return False
+
+    # 3) Google News tabanlı geniş aramalarda (Google News, The Athletic vb.)
+    # City ile ilgili kelime zorunlu.
+    if is_broad_search_source(source_url):
+        if not has_required:
             return False
 
     return True
@@ -227,7 +267,7 @@ def fetch_and_notify():
                 if link in seen_links:
                     continue
 
-                if not is_relevant_news(title, source_name):
+                if not is_relevant_news(title, source_name, url):
                     seen_links[link] = datetime.now()
                     continue
 
