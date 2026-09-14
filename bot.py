@@ -76,6 +76,9 @@ IMPORTANT_NEWS_KEYWORDS = [
     # Teknik ekip değişimleri
     "manager", "head coach", "coach", "appointed", "appointment",
     "sacked", "resigns", "resignation",
+    # Kulübün maçtan yayımladığı fotoğraf seçkileri de fan hesabı için
+    # paylaşılabilir içerik olarak kabul edilir.
+    "gallery", "photo gallery", "picture special",
 ]
 
 # Başka bir spora ait olduğu belli terimler. Başlıkta bunlardan biri geçip
