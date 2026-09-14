@@ -20,14 +20,6 @@ RSS_FEEDS = [
     {
         "name": "BBC Sport",
         "url": "https://feeds.bbci.co.uk/sport/football/teams/manchester-city/rss.xml"
-    },
-    {
-        "name": "Sky Sports",
-        "url": "https://www.skysports.com/rss/12040"
-    },
-    {
-        "name": "The Athletic",
-        "url": "https://news.google.com/rss/search?q=Manchester+City+site:theathletic.com&hl=en-GB&gl=GB&ceid=GB:en"
     }
 ]
 
@@ -50,6 +42,11 @@ BLACKLIST_KEYWORDS = [
     "lineup predicted", "how to watch", "stream", "tv channel",
     "ticket", "former star", "ex-player", "agent says",
     "women", "women's", "wsl", "she/her",
+    # Canlı yayın / maç takip içerikleri; kalıcı haber değeri taşımazlar.
+    "live", "live blog", "live updates", "live stream", "live coverage",
+    "watch live", "live commentary", "as it happened", "minute by minute",
+    "match thread", "matchday live", "highlights", "listen live",
+    "kick-off time", "what time", "where to watch",
     # Bahis / oran içerikleri
     "odds", "betting", "bet builder", "acca", "accumulator",
     "free bet", "best bets", "tips", "correct score", "each way",
@@ -156,11 +153,23 @@ def save_timestamped_set(filepath, data_dict):
             f.write(f"{key}\t{ts.isoformat()}\n")
 
 
+def contains_blacklisted_keyword(title):
+    """Kısa anahtar kelimeleri yalnızca tam kelime olarak eşleştirir.
+
+    Örneğin ``live`` filtresi, "Oliver" veya "Liverpool" içindeki harf
+    dizisini yanlışlıkla canlı yayın olarak değerlendirmemelidir.
+    """
+    return any(
+        re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", title, re.IGNORECASE)
+        for keyword in BLACKLIST_KEYWORDS
+    )
+
+
 def is_relevant_news(title, source_name, source_url):
     norm_title = title.lower()
 
     # 1) Blacklist: her kaynak için geçerli
-    if any(bad_word in norm_title for bad_word in BLACKLIST_KEYWORDS):
+    if contains_blacklisted_keyword(title):
         return False
 
     has_required = any(req_word in norm_title for req_word in REQUIRED_KEYWORDS)
