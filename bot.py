@@ -21,6 +21,10 @@ RSS_FEEDS = [
     {
         "name": "BBC Sport",
         "url": "https://feeds.bbci.co.uk/sport/football/teams/manchester-city/rss.xml"
+    },
+    {
+        "name": "Beanyman Sports",
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCiVg6vRhuyjsWgHkDNOig6A"
     }
 ]
 
@@ -79,6 +83,12 @@ IMPORTANT_NEWS_KEYWORDS = [
     # Kulübün maçtan yayımladığı fotoğraf seçkileri de fan hesabı için
     # paylaşılabilir içerik olarak kabul edilir.
     "gallery", "photo gallery", "picture special",
+]
+
+BEANYMAN_SOURCE_NAME = "Beanyman Sports"
+BEANYMAN_CITY_IDENTIFIERS = ["man city", "manchester city", "maresca"]
+BEANYMAN_INTERVIEW_INDICATORS = [
+    "press conference", "interview", "maresca", "pre-match", "post-match",
 ]
 
 # Başka bir spora ait olduğu belli terimler. Başlıkta bunlardan biri geçip
@@ -203,8 +213,27 @@ def contains_important_news_keyword(title):
     )
 
 
+def is_beanyman_city_interview(title):
+    """Beanyman'ın yalnızca City teknik direktörüyle ilgili videolarını kabul eder.
+
+    Beanyman birçok kulübün videosunu yayımladığı için kaynak tek başına yeterli
+    değildir. Enzo Maresca adı, teknik direktör röportajlarının başlıklarında
+    düzenli olarak geçtiğinden City tanımlayıcısı olarak kullanılır.
+    """
+    normalized_title = unicodedata.normalize("NFKC", title).lower()
+    has_city_identifier = any(identifier in normalized_title for identifier in BEANYMAN_CITY_IDENTIFIERS)
+    has_interview_indicator = any(indicator in normalized_title for indicator in BEANYMAN_INTERVIEW_INDICATORS)
+    return has_city_identifier and has_interview_indicator
+
+
 def is_relevant_news(title, source_name, source_url):
     norm_title = title.lower()
+
+    # Beanyman Sports, teknik direktörün basın toplantıları ve röportajları
+    # için istisnai bir kaynak. Bu videolarda "LIVE" geçmesi normaldir ve
+    # genel canlı yayın filtresine takılmamalıdır.
+    if source_name == BEANYMAN_SOURCE_NAME:
+        return is_beanyman_city_interview(title)
 
     # 1) Blacklist: her kaynak için geçerli
     if contains_blacklisted_keyword(title):
