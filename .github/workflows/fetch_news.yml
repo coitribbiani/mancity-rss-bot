@@ -2,7 +2,9 @@ name: Fetch Man City News
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    # GitHub Actions saat başlarında yoğun olabildiği için tetiklemeleri
+    # yoğun dakikalardan uzak, yine 15 dakikalık aralıklarla çalıştır.
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
 
 jobs:
