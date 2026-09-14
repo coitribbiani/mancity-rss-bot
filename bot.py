@@ -3,6 +3,7 @@ import re
 import sys
 import time
 import logging
+import unicodedata
 import requests
 import feedparser
 from datetime import datetime, timedelta
@@ -154,13 +155,16 @@ def save_timestamped_set(filepath, data_dict):
 
 
 def contains_blacklisted_keyword(title):
-    """Kısa anahtar kelimeleri yalnızca tam kelime olarak eşleştirir.
+    """Süslü Unicode karakterleri normalleştirip tam kelime eşleştirir.
 
     Örneğin ``live`` filtresi, "Oliver" veya "Liverpool" içindeki harf
-    dizisini yanlışlıkla canlı yayın olarak değerlendirmemelidir.
+    dizisini yanlışlıkla canlı yayın olarak değerlendirmemelidir. NFKC
+    normalleştirmesi, ``𝐋𝐈𝐕𝐄`` ve ``Ｓｔｒｅａｍ`` gibi filtreyi atlatmak için
+    kullanılan biçimlendirilmiş karakterleri de normal metne dönüştürür.
     """
+    normalized_title = unicodedata.normalize("NFKC", title)
     return any(
-        re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", title, re.IGNORECASE)
+        re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", normalized_title, re.IGNORECASE)
         for keyword in BLACKLIST_KEYWORDS
     )
 
