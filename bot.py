@@ -48,6 +48,11 @@ BLACKLIST_KEYWORDS = [
     "watch live", "live commentary", "as it happened", "minute by minute",
     "match thread", "matchday live", "highlights", "listen live",
     "kick-off time", "what time", "where to watch",
+    # Rutin kulüp/video ve maç etrafı içerikleri.
+    "watch", "team talk", "week ahead", "monday marker", "match report",
+    "report:", "match preview", "preview:", "pre-match", "pre match",
+    "post-match", "post match", "full-time", "full time", "matchday",
+    "match day", "opposition view", "reaction",
     # Bahis / oran içerikleri
     "odds", "betting", "bet builder", "acca", "accumulator",
     "free bet", "best bets", "tips", "correct score", "each way",
