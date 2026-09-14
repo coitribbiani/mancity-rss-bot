@@ -213,27 +213,31 @@ def contains_important_news_keyword(title):
     )
 
 
-def is_beanyman_city_interview(title):
+def is_beanyman_city_interview(title, link):
     """Beanyman'ın yalnızca City teknik direktörüyle ilgili videolarını kabul eder.
 
     Beanyman birçok kulübün videosunu yayımladığı için kaynak tek başına yeterli
     değildir. Enzo Maresca adı, teknik direktör röportajlarının başlıklarında
-    düzenli olarak geçtiğinden City tanımlayıcısı olarak kullanılır.
+    düzenli olarak geçtiğinden City tanımlayıcısı olarak kullanılır. YouTube
+    Shorts/Reels bağlantıları ``/shorts/`` içerdiğinden doğrudan elenir.
     """
+    if "/shorts/" in link.lower():
+        return False
+
     normalized_title = unicodedata.normalize("NFKC", title).lower()
     has_city_identifier = any(identifier in normalized_title for identifier in BEANYMAN_CITY_IDENTIFIERS)
     has_interview_indicator = any(indicator in normalized_title for indicator in BEANYMAN_INTERVIEW_INDICATORS)
     return has_city_identifier and has_interview_indicator
 
 
-def is_relevant_news(title, source_name, source_url):
+def is_relevant_news(title, source_name, source_url, link=""):
     norm_title = title.lower()
 
     # Beanyman Sports, teknik direktörün basın toplantıları ve röportajları
     # için istisnai bir kaynak. Bu videolarda "LIVE" geçmesi normaldir ve
     # genel canlı yayın filtresine takılmamalıdır.
     if source_name == BEANYMAN_SOURCE_NAME:
-        return is_beanyman_city_interview(title)
+        return is_beanyman_city_interview(title, link)
 
     # 1) Blacklist: her kaynak için geçerli
     if contains_blacklisted_keyword(title):
@@ -348,7 +352,7 @@ def fetch_and_notify():
                 if link in seen_links:
                     continue
 
-                if not is_relevant_news(title, source_name, url):
+                if not is_relevant_news(title, source_name, url, link):
                     seen_links[link] = datetime.now()
                     continue
 
