@@ -61,6 +61,23 @@ BLACKLIST_KEYWORDS = [
 # Man City ile doğrudan ilgili olduğunu doğrulamak için kullanılan kelimeler
 REQUIRED_KEYWORDS = ["man city", "manchester city", "maresca", "etihad"]
 
+# Kanalın yayın politikasına göre yalnızca kalıcı, paylaşmaya değer kulüp
+# gelişmeleri gönderilir. Maç içeriği ve yorum başlıkları, yeni bir ifade ile
+# yazılsalar bile bu listede bir sinyal taşımadıkça bildirim oluşturmaz.
+IMPORTANT_NEWS_KEYWORDS = [
+    # Transfer, sözleşme ve kadro hareketleri
+    "transfer", "signing", "signs", "signed", "deal", "contract",
+    "extension", "loan", "loaned", "joins", "joined", "departure",
+    "leaves", "exit", "released", "release clause", "squad list",
+    "registered", "registration", "promoted",
+    # Sakatlık ve oyuncunun müsaitliği
+    "injury", "injured", "fitness", "surgery", "recovery", "recovering",
+    "ruled out", "unavailable", "returns from injury",
+    # Teknik ekip değişimleri
+    "manager", "head coach", "coach", "appointed", "appointment",
+    "sacked", "resigns", "resignation",
+]
+
 # Başka bir spora ait olduğu belli terimler. Başlıkta bunlardan biri geçip
 # REQUIRED_KEYWORDS'ten hiçbiri geçmiyorsa haber, kaynağı ne olursa olsun elenir.
 # (F1, tenis, diğer ligler vb. "Manchester City" araması bazen bunları da
@@ -174,11 +191,25 @@ def contains_blacklisted_keyword(title):
     )
 
 
+def contains_important_news_keyword(title):
+    """Başlığın kanalın paylaşım politikasındaki ana konulardan birini taşıdığını doğrular."""
+    normalized_title = unicodedata.normalize("NFKC", title)
+    return any(
+        re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", normalized_title, re.IGNORECASE)
+        for keyword in IMPORTANT_NEWS_KEYWORDS
+    )
+
+
 def is_relevant_news(title, source_name, source_url):
     norm_title = title.lower()
 
     # 1) Blacklist: her kaynak için geçerli
     if contains_blacklisted_keyword(title):
+        return False
+
+    # Bildirimleri maç anlatımı ve yorumlardan arındırmak için, başlıkta
+    # transfer/kadro, sakatlık ya da teknik ekip gelişimi bulunması zorunlu.
+    if not contains_important_news_keyword(title):
         return False
 
     has_required = any(req_word in norm_title for req_word in REQUIRED_KEYWORDS)
