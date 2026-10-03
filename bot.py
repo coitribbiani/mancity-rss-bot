@@ -5,6 +5,7 @@ import time
 import logging
 import unicodedata
 import requests
+import html
 import feedparser
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
@@ -83,6 +84,10 @@ IMPORTANT_NEWS_KEYWORDS = [
     # Kulübün maçtan yayımladığı fotoğraf seçkileri de fan hesabı için
     # paylaşılabilir içerik olarak kabul edilir.
     "gallery", "photo gallery", "picture special",
+    # Kulübün genel gidişatını etkileyen saha dışı, kupa ve lig haberleri
+    "charges", "ffp", "financial fair play", "hearing", "premier league",
+    "champions league", "ucl", "trophy", "title", "cup", "award",
+    "ballon d'or", "win", "draw", "loss", "defeat", "victory"
 ]
 
 BEANYMAN_SOURCE_NAME = "Beanyman Sports"
@@ -131,9 +136,10 @@ def send_telegram_message(title, link, source_name):
         logger.error("TELEGRAM_BOT_TOKEN veya TELEGRAM_CHAT_ID tanımlanmamış!")
         return False
 
+    safe_title = html.escape(title)
     text = (
         f"⚽ <b>Manchester City News</b>\n\n"
-        f"📰 {title}\n\n"
+        f"📰 {safe_title}\n\n"
         f"📌 <b>Kaynak:</b> {source_name}\n"
         f"🔗 <a href='{link}'>Haberi Oku</a>\n\n"
         f"#ManCity #MCFC"
