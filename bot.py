@@ -48,6 +48,12 @@ BLACKLIST_KEYWORDS = [
     "lineup predicted", "how to watch", "stream", "tv channel",
     "ticket", "former star", "ex-player", "agent says",
     "women", "women's", "wsl", "she/her",
+    # Başlıkta "women" geçmeyen kadın takımı haberleri (isim/terimlerle).
+    "lionesses", "jeglertz", "lauren hemp", "hemp", "slegers", "wfc",
+    "ladies", "womens", "lucy bronze", "khadija shaw", "gareth taylor",
+    # Alt yaş grupları ve akademi
+    "u18", "u18s", "u21", "u21s", "u23", "u23s", "under-18", "under-21",
+    "under-23", "academy", "youth cup",
     # Canlı yayın / maç takip içerikleri; kalıcı haber değeri taşımazlar.
     "live", "live blog", "live updates", "live stream", "live coverage",
     "watch live", "live commentary", "as it happened", "minute by minute",
@@ -84,10 +90,11 @@ IMPORTANT_NEWS_KEYWORDS = [
     # Kulübün maçtan yayımladığı fotoğraf seçkileri de fan hesabı için
     # paylaşılabilir içerik olarak kabul edilir.
     "gallery", "photo gallery", "picture special",
-    # Kulübün genel gidişatını etkileyen saha dışı, kupa ve lig haberleri
+    # Kulübün genel gidişatını etkileyen saha dışı haberler.
+    # (win/draw/loss/defeat/victory/title/cup gibi maç sonucu kelimeleri
+    # kadın takımı ve alt yaş grubu haberlerini içeri aldığı için çıkarıldı.)
     "charges", "ffp", "financial fair play", "hearing", "premier league",
-    "champions league", "ucl", "trophy", "title", "cup", "award",
-    "ballon d'or", "win", "draw", "loss", "defeat", "victory"
+    "champions league", "ucl", "trophy", "ballon d'or",
 ]
 
 BEANYMAN_SOURCE_NAME = "Beanyman Sports"
