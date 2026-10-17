@@ -37,28 +37,86 @@ LOG_FILE = "bot.log"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-TITLE_SIMILARITY_THRESHOLD = 0.85
+TITLE_SIMILARITY_THRESHOLD = 0.80
+TITLE_WORD_OVERLAP_THRESHOLD = 0.70
 SEEN_RETENTION_DAYS = 30
 TELEGRAM_SEND_DELAY = 0.4
-MAX_PER_RUN = 15
+MAX_PER_RUN = 10
+
+# Google News üzerinden gelen düşük kaliteli, clickbait, dedikodu veya
+# rakip takım odaklı yayıncılar.
+BLACKLISTED_PUBLISHERS = {
+    # Tabloid, dedikodu ve clickbait agregatörler
+    "football365", "football365.com", "the sun", "thesun.co.uk",
+    "daily mail", "dailymail.co.uk", "daily mirror", "the mirror", "mirror.co.uk",
+    "daily express", "express.co.uk", "daily star", "the daily star", "dailystar.co.uk",
+    "teamtalk", "teamtalk.com", "caughtoffside", "caughtoffside.com",
+    "givemesport", "givemesport.com", "talksport", "talksport.com",
+    "planet football", "planetfootball.com", "fourfourtwo", "fourfourtwo.com",
+    "sports mole", "sportsmole.co.uk", "football insider", "90min",
+    "goal.com", "livescore", "onefootball", "dazn", "sportbible",
+    "metro.co.uk", "aol.co.uk", "aol.com", "hayters.com",
+    "sportsadda", "the football freak", "vavel.com",
+    # Rakip takım taraftar siteleri ve yerel gazeteleri
+    "this is anfield", "liverpool echo", "liverpoolecho.co.uk",
+    "the anfield wrap", "daveockop", "liverpool fc",
+    "arseblog", "arseblog news", "daily cannon", "pain in the arsenal",
+    "football.london", "football london", "tottenham hotspur",
+    "sunderland echo", "rangersnews.uk", "ipswich star",
+    "east anglian daily times", "nottingham post", "sussexworld",
+    "hampshire chronicle", "lancashire telegraph", "the mag",
+    # Taraftar blogları / ikincil özet siteleri
+    "city xtra", "cityxtra.co.uk", "esteemed kompany", "read man city",
+}
 
 # Başlıkta geçerse haberi doğrudan çöpe atar (tüm kaynaklar için geçerli)
 BLACKLIST_KEYWORDS = [
-    "ratings", "fpl", "fantasy", "quiz", "opinion", "predicted xi",
-    "lineup predicted", "how to watch", "stream", "tv channel",
-    "ticket", "former star", "ex-player", "agent says",
-    "women", "women's", "wsl", "she/her",
-    # Başlıkta "women" geçmeyen kadın takımı haberleri (isim/terimlerle).
-    "lionesses", "jeglertz", "lauren hemp", "hemp", "slegers", "wfc",
-    "ladies", "womens", "lucy bronze", "khadija shaw", "gareth taylor",
-    # Alt yaş grupları ve akademi
-    "u18", "u18s", "u21", "u21s", "u23", "u23s", "under-18", "under-21",
-    "under-23", "academy", "youth cup",
+    # Reyting, fantezi futbol, tahmin ve eğlence içerikleri
+    "ratings", "fpl", "fantasy", "quiz", "opinion", "column", "letters",
+    "mailbag", "podcast", "have your say", "talking points",
+    "winners and losers", "supercomputer", "mock draft", "archive",
+    "prediction", "predictions", "predicts", "recap",
+    "head-to-head", "head to head", "h2h",
+    # Kadro tahminleri ve maç önü dizilişler
+    "predicted xi", "lineup predicted", "predicted lineup", "predicted line-up",
+    "starting lineup", "starting line-up", "starting xi", "confirmed team news",
+    "line-ups", "lineups", "line ups", "combined xi", "man city xi",
+    # Yayın, bilet ve izleme bilgileri
+    "how to watch", "where to watch", "what time", "kick-off time",
+    "stream", "streams", "tv channel", "tv info", "ticket", "tickets",
+    # Dedikodu, söylenti, eski oyuncular ve yorumcu polemikleri
+    "rumour", "rumours", "rumor", "rumors", "gossip", "paper talk",
+    "paper round", "transfer talk", "transfer chatter", "media watch",
+    "former star", "ex-player", "ex-man city", "former man city",
+    "ex-manchester city", "former manchester city", "ex-city", "former city",
+    "ex-premier league", "former premier league", "ex-united", "ex-man utd",
+    "ex-liverpool", "ex-arsenal", "ex-chelsea", "ex-real madrid",
+    "cult hero", "pundit", "pundits", "agent says", "agent hints", "advisor",
+    "slams", "mocks", "banner", "bombshell", "turned down", "i rejected",
+    "when i joined", "should've joined", "should have joined", "signed shirts",
+    "police", "arrests", "bananas", "inflatable",
+    # FFP / 115 suçlama davası spekülasyonları, politik polemikler ve ceza tahminleri
+    "charges", "115 charges", "114 charges", "ffp", "financial fair play",
+    "guilty verdict", "guilty verdicts", "points deduction", "expulsion",
+    "expelled", "relegated", "relegation", "stripped of", "punishment",
+    "punishments", "sanction", "sanctions", "settlement", "whistleblower",
+    "mancini", "andy burnham", "burnham", "lisa nandy", "regulator", "hmrc",
+    "illegal payments", "rule breaches", "cheating",
+    # Kadın futbol takımı (kelime, lig ve oyuncu/teknik ekip isimleri)
+    "women", "women's", "womens", "wsl", "uwcl", "wfc", "ladies", "she/her",
+    "lionesses", "jeglertz", "lauren hemp", "hemp", "slegers",
+    "lucy bronze", "khadija shaw", "bunny shaw", "gareth taylor",
+    "alex greenwood", "risa shimizu", "mary fowler", "vivianne miedema",
+    "miedema", "kerolin", "roebuck", "keating",
+    # Alt yaş grupları, akademi ve e-spor
+    "u18", "u18s", "u19", "u19s", "u21", "u21s", "u23", "u23s",
+    "under-18", "under-19", "under-21", "under-23", "academy", "youth cup",
+    "eds", "elite development squad", "wonderkid", "youngster", "scholarship",
+    "esports", "e-sports",
     # Canlı yayın / maç takip içerikleri; kalıcı haber değeri taşımazlar.
     "live", "live blog", "live updates", "live stream", "live coverage",
     "watch live", "live commentary", "as it happened", "minute by minute",
     "match thread", "matchday live", "highlights", "listen live",
-    "kick-off time", "what time", "where to watch",
     # Rutin kulüp/video ve maç etrafı içerikleri.
     "watch", "team talk", "week ahead", "monday marker", "match report",
     "report:", "match preview", "preview:", "pre-match", "pre match",
@@ -75,26 +133,27 @@ REQUIRED_KEYWORDS = ["man city", "manchester city", "maresca", "etihad"]
 # Kanalın yayın politikasına göre yalnızca kalıcı, paylaşmaya değer kulüp
 # gelişmeleri gönderilir. Maç içeriği ve yorum başlıkları, yeni bir ifade ile
 # yazılsalar bile bu listede bir sinyal taşımadıkça bildirim oluşturmaz.
+# Not: "leaves", "deal", "released", "extension", "recovery", "manager", "coach"
+# gibi tek başına çok genel olan ve alakasız haberlerde sıkça geçen kelimeler
+# yerine doğrudan somut ifadeler kullanılır.
 IMPORTANT_NEWS_KEYWORDS = [
     # Transfer, sözleşme ve kadro hareketleri
-    "transfer", "signing", "signs", "signed", "deal", "contract",
-    "extension", "loan", "loaned", "joins", "joined", "departure",
-    "leaves", "exit", "released", "release clause", "squad list",
-    "registered", "registration", "promoted",
+    "transfer", "signing", "signs", "signed", "contract",
+    "contract extension", "extends contract", "new contract",
+    "loan", "loaned", "joins", "joined", "departure",
+    "release clause", "squad list", "registered", "registration", "promoted",
+    "new deal", "transfer deal", "loan deal", "medical", "bid", "fee agreed",
+    "reach agreement", "agrees terms", "personal terms",
     # Sakatlık ve oyuncunun müsaitliği
-    "injury", "injured", "fitness", "surgery", "recovery", "recovering",
-    "ruled out", "unavailable", "returns from injury",
+    "injury", "injured", "fitness", "surgery", "recovering",
+    "ruled out", "unavailable", "returns from injury", "injury update",
+    "injury blow", "injury boost", "injury scare",
     # Teknik ekip değişimleri
-    "manager", "head coach", "coach", "appointed", "appointment",
-    "sacked", "resigns", "resignation",
+    "appointed", "appointment", "resigns",
+    "new manager", "new head coach",
     # Kulübün maçtan yayımladığı fotoğraf seçkileri de fan hesabı için
     # paylaşılabilir içerik olarak kabul edilir.
     "gallery", "photo gallery", "picture special",
-    # Kulübün genel gidişatını etkileyen saha dışı haberler.
-    # (win/draw/loss/defeat/victory/title/cup gibi maç sonucu kelimeleri
-    # kadın takımı ve alt yaş grubu haberlerini içeri aldığı için çıkarıldı.)
-    "charges", "ffp", "financial fair play", "hearing", "premier league",
-    "champions league", "ucl", "trophy", "ballon d'or",
 ]
 
 BEANYMAN_SOURCE_NAME = "Beanyman Sports"
@@ -105,8 +164,6 @@ BEANYMAN_INTERVIEW_INDICATORS = [
 
 # Başka bir spora ait olduğu belli terimler. Başlıkta bunlardan biri geçip
 # REQUIRED_KEYWORDS'ten hiçbiri geçmiyorsa haber, kaynağı ne olursa olsun elenir.
-# (F1, tenis, diğer ligler vb. "Manchester City" araması bazen bunları da
-# yanlışlıkla döndürebiliyor.)
 OTHER_SPORT_KEYWORDS = [
     "f1", "formula 1", "grand prix", "motogp", "moto gp",
     "tennis", "wimbledon", "atp", "wta", "us open", "roland garros",
@@ -118,12 +175,52 @@ OTHER_SPORT_KEYWORDS = [
     "golf", "ryder cup", "olympics",
 ]
 
-# Yalnızca genel/geniş arama yapan kaynaklarda (Google News tabanlı sorgular)
-# REQUIRED_KEYWORDS kontrolü zorunlu tutulur. Kaynak adına değil, URL'in
-# Google News araması olup olmadığına bakılır — böylece "The Athletic" gibi
-# aslında Google News üzerinden sorgulanan kaynaklar da bu kontrolden kaçmaz.
+# Rakip kulüp veya teknik direktör özneleri (başlık bunlarla başlayıp sadece
+# "Man City maçı öncesi" diyorsa rakip takımın iç haberidir).
+OPPONENT_SUBJECT_PREFIXES = (
+    "liverpool", "arsenal", "man utd", "manchester united", "chelsea",
+    "tottenham", "spurs", "newcastle", "aston villa", "brighton", "everton",
+    "sunderland", "ipswich", "brentford", "fulham", "west ham", "wolves",
+    "nottingham forest", "crystal palace", "bournemouth", "leicester",
+    "southampton", "leeds", "bayern", "psg", "paris saint-germain",
+    "real madrid", "barcelona", "inter", "juventus",
+    "andoni iraola", "mikel arteta", "michael carrick", "arne slot",
+    "dominik szoboszlai", "alexander isak", "cody gakpo", "virgil van dijk",
+)
+
+# Benzerlik karşılaştırmasında elenecek genel/dolgu kelimeler
+TITLE_STOPWORDS = {
+    "the", "a", "an", "in", "on", "at", "to", "for", "of", "and", "or",
+    "after", "amid", "as", "with", "over", "by", "from", "up", "out",
+    "is", "are", "was", "were", "be", "been", "will", "would", "could",
+    "should", "has", "have", "had", "his", "her", "their", "its", "our",
+    "man", "city", "citys", "manchester", "fc", "mcfc", "club", "clubs",
+    "news", "update", "latest", "report", "reports", "says", "said",
+    "ahead", "before", "into", "about", "new", "more", "who", "what",
+    "why", "how", "when", "where",
+}
+
+
 def is_broad_search_source(url):
     return "news.google.com" in url
+
+
+def extract_publisher_and_clean_title(raw_title, source_url):
+    """Google News başlıklarının sonundaki ' - Yayıncı' kısmını ayıklar."""
+    if is_broad_search_source(source_url) and " - " in raw_title:
+        clean_title, publisher = raw_title.rsplit(" - ", 1)
+        clean_title = clean_title.strip()
+        publisher = publisher.strip()
+        if clean_title and publisher:
+            return clean_title, publisher
+    return raw_title.strip(), ""
+
+
+def is_blacklisted_publisher(publisher):
+    if not publisher:
+        return False
+    norm_pub = unicodedata.normalize("NFKC", publisher).lower().strip()
+    return norm_pub in BLACKLISTED_PUBLISHERS
 
 
 logging.basicConfig(
@@ -144,10 +241,11 @@ def send_telegram_message(title, link, source_name):
         return False
 
     safe_title = html.escape(title)
+    safe_source = html.escape(source_name)
     text = (
         f"⚽ <b>Manchester City News</b>\n\n"
         f"📰 {safe_title}\n\n"
-        f"📌 <b>Kaynak:</b> {source_name}\n"
+        f"📌 <b>Kaynak:</b> {safe_source}\n"
         f"🔗 <a href='{link}'>Haberi Oku</a>\n\n"
         f"#ManCity #MCFC"
     )
@@ -160,14 +258,21 @@ def send_telegram_message(title, link, source_name):
         "disable_web_page_preview": False
     }
 
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        response.raise_for_status()
-        logger.info(f"[{source_name}] Bildirim gönderildi: {title}")
-        return True
-    except requests.exceptions.RequestException as e:
-        logger.error(f"[{source_name}] Telegram gönderim hatası: {e}")
-        return False
+    for attempt in range(2):
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code == 429:
+                retry_after = int(response.json().get("parameters", {}).get("retry_after", 5))
+                logger.warning(f"Telegram 429 hız sınırı, {retry_after} sn bekleniyor...")
+                time.sleep(min(retry_after, 30))
+                continue
+            response.raise_for_status()
+            logger.info(f"[{source_name}] Bildirim gönderildi: {title}")
+            return True
+        except requests.exceptions.RequestException as e:
+            logger.error(f"[{source_name}] Telegram gönderim hatası: {e}")
+            return False
+    return False
 
 
 def load_timestamped_set(filepath):
@@ -202,63 +307,83 @@ def save_timestamped_set(filepath, data_dict):
             f.write(f"{key}\t{ts.isoformat()}\n")
 
 
-def contains_blacklisted_keyword(title):
-    """Süslü Unicode karakterleri normalleştirip tam kelime eşleştirir.
+BLACKLIST_PATTERN = re.compile(
+    r"(?<!\w)(?:" + "|".join(re.escape(k) for k in BLACKLIST_KEYWORDS) + r")(?!\w)",
+    re.IGNORECASE,
+)
+IMPORTANT_NEWS_PATTERN = re.compile(
+    r"(?<!\w)(?:" + "|".join(re.escape(k) for k in IMPORTANT_NEWS_KEYWORDS) + r")(?!\w)",
+    re.IGNORECASE,
+)
 
-    Örneğin ``live`` filtresi, "Oliver" veya "Liverpool" içindeki harf
-    dizisini yanlışlıkla canlı yayın olarak değerlendirmemelidir. NFKC
-    normalleştirmesi, ``𝐋𝐈𝐕𝐄`` ve ``Ｓｔｒｅａｍ`` gibi filtreyi atlatmak için
-    kullanılan biçimlendirilmiş karakterleri de normal metne dönüştürür.
-    """
+
+def contains_blacklisted_keyword(title):
+    """Süslü Unicode karakterleri normalleştirip tam kelime eşleştirir."""
     normalized_title = unicodedata.normalize("NFKC", title)
-    return any(
-        re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", normalized_title, re.IGNORECASE)
-        for keyword in BLACKLIST_KEYWORDS
-    )
+    return bool(BLACKLIST_PATTERN.search(normalized_title))
 
 
 def contains_important_news_keyword(title):
     """Başlığın kanalın paylaşım politikasındaki ana konulardan birini taşıdığını doğrular."""
     normalized_title = unicodedata.normalize("NFKC", title)
-    return any(
-        re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", normalized_title, re.IGNORECASE)
-        for keyword in IMPORTANT_NEWS_KEYWORDS
-    )
+    return bool(IMPORTANT_NEWS_PATTERN.search(normalized_title))
 
 
 def is_beanyman_city_interview(title, link):
-    """Beanyman'ın yalnızca City teknik direktörüyle ilgili videolarını kabul eder.
-
-    Beanyman birçok kulübün videosunu yayımladığı için kaynak tek başına yeterli
-    değildir. Enzo Maresca adı, teknik direktör röportajlarının başlıklarında
-    düzenli olarak geçtiğinden City tanımlayıcısı olarak kullanılır. YouTube
-    Shorts/Reels bağlantıları ``/shorts/`` içerdiğinden doğrudan elenir.
-    """
+    """Beanyman'ın yalnızca City teknik direktörüyle ilgili videolarını kabul eder."""
     if "/shorts/" in link.lower():
         return False
 
     normalized_title = unicodedata.normalize("NFKC", title).lower()
+    if "chelsea" in normalized_title and "man city" not in normalized_title and "manchester city" not in normalized_title:
+        return False
     has_city_identifier = any(identifier in normalized_title for identifier in BEANYMAN_CITY_IDENTIFIERS)
     has_interview_indicator = any(indicator in normalized_title for indicator in BEANYMAN_INTERVIEW_INDICATORS)
     return has_city_identifier and has_interview_indicator
 
 
-def is_relevant_news(title, source_name, source_url, link=""):
-    norm_title = title.lower()
+def is_opponent_match_injury_news(norm_title):
+    """Rakip takımların Man City maçı öncesi kendi sakatlık/kadro haberlerini eler."""
+    if norm_title.startswith(OPPONENT_SUBJECT_PREFIXES):
+        if any(w in norm_title for w in ("injury", "injured", "fitness", "ruled out", "unavailable", "sweating on", "hit with")):
+            return True
+    if re.search(r"\b(ahead of|before|prior to|for)\s+(?:[\w\s]{0,20}\b)?(man city|manchester city|city)\s+(clash|trip|game|match|test|visit|showdown|tie)\b", norm_title):
+        if not norm_title.startswith(("man city", "manchester city", "enzo maresca", "maresca", "erling haaland", "haaland", "city ")):
+            return True
+    if re.search(r"\b(clash|showdown|game|match|tie)\s+with\s+(man city|manchester city)\b", norm_title):
+        if not norm_title.startswith(("man city", "manchester city", "enzo maresca", "maresca", "erling haaland", "haaland", "city ")):
+            return True
+    return False
 
+
+def is_relevant_news(title, source_name, source_url, link=""):
     # Beanyman Sports, teknik direktörün basın toplantıları ve röportajları
     # için istisnai bir kaynak. Bu videolarda "LIVE" geçmesi normaldir ve
     # genel canlı yayın filtresine takılmamalıdır.
     if source_name == BEANYMAN_SOURCE_NAME:
         return is_beanyman_city_interview(title, link)
 
+    clean_title, publisher = extract_publisher_and_clean_title(title, source_url)
+    if is_blacklisted_publisher(publisher):
+        return False
+
+    norm_title = unicodedata.normalize("NFKC", clean_title).lower()
+
+    # Chelsea ile ilgili Maresca geçmişi haberlerini (City adı geçmiyorsa) ele
+    if "chelsea" in norm_title and "man city" not in norm_title and "manchester city" not in norm_title:
+        return False
+
+    # Rakip takımın "Man City maçı öncesi" kendi sakatlık haberlerini ele
+    if is_opponent_match_injury_news(norm_title):
+        return False
+
     # 1) Blacklist: her kaynak için geçerli
-    if contains_blacklisted_keyword(title):
+    if contains_blacklisted_keyword(clean_title):
         return False
 
     # Bildirimleri maç anlatımı ve yorumlardan arındırmak için, başlıkta
     # transfer/kadro, sakatlık ya da teknik ekip gelişimi bulunması zorunlu.
-    if not contains_important_news_keyword(title):
+    if not contains_important_news_keyword(clean_title):
         return False
 
     has_required = any(req_word in norm_title for req_word in REQUIRED_KEYWORDS)
@@ -269,8 +394,7 @@ def is_relevant_news(title, source_name, source_url, link=""):
         if not has_required:
             return False
 
-    # 3) Google News tabanlı geniş aramalarda (Google News, The Athletic vb.)
-    # City ile ilgili kelime zorunlu.
+    # 3) Google News tabanlı geniş aramalarda City ile ilgili kelime zorunlu.
     if is_broad_search_source(source_url):
         if not has_required:
             return False
@@ -278,18 +402,33 @@ def is_relevant_news(title, source_name, source_url, link=""):
     return True
 
 
-def normalize_title(title):
-    title = title.lower()
-    title = re.sub(r"[^\w\s]", "", title)
-    title = re.sub(r"\s+", " ", title).strip()
-    return title
+def normalize_title(title, source_url=""):
+    clean_title, _ = extract_publisher_and_clean_title(title, source_url)
+    clean_title = unicodedata.normalize("NFKC", clean_title).lower()
+    clean_title = re.sub(r"[^\w\s]", "", clean_title)
+    clean_title = re.sub(r"\s+", " ", clean_title).strip()
+    return clean_title
+
+
+def extract_significant_words(norm_title):
+    return {
+        w for w in norm_title.split()
+        if len(w) > 2 and w not in TITLE_STOPWORDS
+    }
 
 
 def is_duplicate_title(norm_title, recent_titles):
+    words_a = extract_significant_words(norm_title)
     for seen_title in recent_titles:
         ratio = SequenceMatcher(None, norm_title, seen_title).ratio()
         if ratio >= TITLE_SIMILARITY_THRESHOLD:
             return True
+        if len(words_a) >= 3:
+            words_b = extract_significant_words(seen_title)
+            if len(words_b) >= 3:
+                overlap = len(words_a & words_b) / min(len(words_a), len(words_b))
+                if overlap >= TITLE_WORD_OVERLAP_THRESHOLD:
+                    return True
     return False
 
 
@@ -360,8 +499,6 @@ def fetch_and_notify():
                 if not link or not title:
                     continue
 
-                norm_title = normalize_title(title)
-
                 if link in seen_links:
                     continue
 
@@ -369,13 +506,17 @@ def fetch_and_notify():
                     seen_links[link] = datetime.now()
                     continue
 
+                clean_title, publisher = extract_publisher_and_clean_title(title, url)
+                norm_title = normalize_title(title, url)
+
                 if is_duplicate_title(norm_title, session_titles) or \
                    is_duplicate_title(norm_title, seen_title_hist.keys()):
                     seen_links[link] = datetime.now()
-                    logger.info(f"[{source_name}] Benzer başlık zaten gönderilmiş, atlanıyor: {title}")
+                    logger.info(f"[{source_name}] Benzer başlık zaten gönderilmiş, atlanıyor: {clean_title}")
                     continue
 
-                success = send_telegram_message(title, link, source_name)
+                display_source = f"{source_name} ({publisher})" if publisher else source_name
+                success = send_telegram_message(clean_title, link, display_source)
                 if success:
                     now = datetime.now()
                     seen_links[link] = now
@@ -384,7 +525,7 @@ def fetch_and_notify():
                     total_new_count += 1
                     time.sleep(TELEGRAM_SEND_DELAY)
                 else:
-                    logger.warning(f"[{source_name}] Gönderim başarısız: {title}")
+                    logger.warning(f"[{source_name}] Gönderim başarısız: {clean_title}")
 
             except Exception as e:
                 logger.exception(f"[{source_name}] Hata, haber atlanıyor: {e}")
